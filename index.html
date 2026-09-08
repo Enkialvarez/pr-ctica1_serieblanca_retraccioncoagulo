@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab. Virtual de Alvarez — Coagulación Sanguínea</title>
+<style>
+  :root{
+    --azul:#1a5276;
+    --azul-claro:#2e86ab;
+    --rojo:#922b21;
+    --rojo-claro:#c0392b;
+    --verde:#27ae60;
+    --amarillo:#f1c40f;
+    --naranja:#e67e22;
+    --gris:#f4f6f7;
+    --gris-oscuro:#7f8c8d;
+    --texto:#2c3e50;
+    --sombra:0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:var(--gris); color:var(--texto); line-height:1.55;}
+
+  /* Header fijo */
+  .header{position:sticky; top:0; z-index:100; background:linear-gradient(135deg, var(--azul) 0%, var(--azul-claro) 100%); color:#fff; padding:1rem 1rem 0.6rem; text-align:center; box-shadow:var(--sombra);}
+  .header h1{font-size:1.6rem; letter-spacing:1px; text-transform:uppercase;}
+  .header .sub{font-size:0.95rem; opacity:0.95; margin-top:0.2rem;}
+  .nav{display:flex; justify-content:center; gap:0.5rem; margin-top:0.8rem; flex-wrap:wrap;}
+  .nav button{background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35); color:#fff; padding:0.55rem 1rem; border-radius:2rem; cursor:pointer; font-size:0.92rem; transition:0.25s;}
+  .nav button:hover, .nav button.active{background:#fff; color:var(--azul); font-weight:700;}
+
+  /* Layout */
+  .container{max-width:1000px; margin:0 auto; padding:1rem;}
+  .tab-panel{display:none; animation:fadeIn 0.35s ease;}
+  .tab-panel.active{display:block;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* Tarjetas */
+  .card{background:#fff; border-radius:12px; padding:1.1rem; margin-bottom:1rem; box-shadow:var(--sombra);}
+  .card h2{font-size:1.15rem; color:var(--azul); margin-bottom:0.6rem; border-left:4px solid var(--azul); padding-left:0.5rem;}
+  .card h3{font-size:1rem; color:var(--azul-claro); margin:0.8rem 0 0.4rem;}
+  .card p, .card li{font-size:0.95rem; color:var(--texto);}
+  .card ul{padding-left:1.2rem;}
+  .card li{margin:0.25rem 0;}
+
+  /* Pasos numerados */
+  .steps{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:0.7rem;}
+  .step{background:var(--gris); border-radius:8px; padding:0.7rem 0.9rem; border-left:4px solid var(--azul-claro); font-size:0.92rem;}
+  .step strong{color:var(--azul); display:block; margin-bottom:0.2rem;}
+
+  /* Controles */
+  .controls{display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.8rem 0;}
+  .controls label{font-weight:600; font-size:0.9rem; color:var(--azul);}
+  select, .btn{font-family:inherit; font-size:0.95rem; padding:0.5rem 0.8rem; border-radius:8px; border:1px solid #ccc;}
+  select{background:#fff; cursor:pointer;}
+  .btn{background:var(--azul); color:#fff; border:none; cursor:pointer; transition:0.2s;}
+  .btn:hover{background:var(--azul-claro);}
+  .btn.rojo{background:var(--rojo);}
+  .btn.rojo:hover{background:var(--rojo-claro);}
+  .btn:disabled{opacity:0.5; cursor:not-allowed;}
+
+  /* Tablas */
+  table{width:100%; border-collapse:collapse; margin:0.6rem 0; font-size:0.92rem;}
+  th, td{border:1px solid #dbe2e8; padding:0.5rem 0.6rem; text-align:left;}
+  th{background:var(--azul); color:#fff; font-weight:600;}
+  tr:nth-child(even){background:#f8f9fa;}
+  tr.highlight{background:#fff9c4 !important; outline:2px solid var(--amarillo);}
+
+  /* SVG contenedores */
+  .svg-wrap{width:100%; max-width:520px; margin:0 auto; background:#fff; border-radius:12px; padding:1rem; box-shadow:var(--sombra);}
+  svg{display:block; width:100%; height:auto;}
+
+  /* Panel interpretación */
+  .interpreta{background:#eaf2f8; border-left:4px solid var(--azul-claro); padding:0.8rem 1rem; border-radius:0 8px 8px 0; font-size:0.95rem; margin-top:0.6rem;}
+  .interpreta strong{color:var(--azul);}
+
+  /* Cronómetro */
+  .cronobox{background:#fff; border:2px solid var(--azul); border-radius:10px; padding:0.6rem 1rem; text-align:center; font-variant-numeric:tabular-nums; font-size:1.1rem; font-weight:700; color:var(--azul); display:inline-block; min-width:120px;}
+
+  /* Transiciones SVG caja Petri (las transiciones deben ir en CSS, no como atributo) */
+  #salchicha-group, #suero-group, #fragmentos, #lisis, #eritros{transition:all 0.9s ease;}
+  #salchicha-group, #suero-group{transform-box:fill-box; transform-origin:center;}
+  .fase-badge{display:inline-block; background:var(--azul); color:#fff; padding:0.35rem 0.9rem; border-radius:2rem; font-size:0.85rem; font-weight:600; margin-bottom:0.6rem;}
+
+  /* Responsive */
+  @media (max-width:600px){
+    .header h1{font-size:1.25rem;}
+    .nav button{padding:0.45rem 0.8rem; font-size:0.85rem;}
+    .svg-wrap{padding:0.6rem;}
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>Lab. Virtual de Alvarez</h1>
+  <div class="sub">Biól. Enrique Torres Alvarez</div>
+  <nav class="nav" id="nav">
+    <button class="active" data-tab="tab1">Práctica 1: Retracción del Coágulo</button>
+    <button data-tab="tab2">Práctica 2: Tiempo de Coagulación (Lee-White)</button>
+  </nav>
+</header>
+
+<main class="container">
+
+<!-- ====================== PESTAÑA 1 ====================== -->
+<section id="tab1" class="tab-panel active">
+
+  <div class="card">
+    <h2>Observación del Coágulo — Retracción</h2>
+    <p style="font-size:0.95rem; margin-bottom:0.6rem;">
+      Aquí vas a ver cómo se comporta un coágulo de sangre bajo distintas condiciones. 
+      No es magia: es la acción de las plaquetas y el fibrinógeno. Si algo falla, el coágulo se ve distinto.
+    </p>
+    <div class="steps" id="p1-steps">
+      <div class="step"><strong>1.</strong> Calentar baño María a 37 °C.</div>
+      <div class="step"><strong>2.</strong> Venopunción limpia (sin anticoagulante), extraer 5 mL de sangre.</div>
+      <div class="step"><strong>3.</strong> Distribuir 2.5 mL en cada tubo de ensaye.</div>
+      <div class="step"><strong>4.</strong> Incubar en baño María 1 hora.</div>
+      <div class="step"><strong>5.</strong> Retirar tubos, decantar suero, retirar coágulo con gancho y depositarlo en caja Petri.</div>
+      <div class="step"><strong>6.</strong> Observar consistencia, adherencia a la pared del tubo y color.</div>
+      <div class="step"><strong>7.</strong> Repetir observación a las 24 horas para verificar retracción completa.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Simulador — Caja Petri</h2>
+    <div class="controls">
+      <label for="condicion">Condición:</label>
+      <select id="condicion">
+        <option value="normal">Normal</option>
+        <option value="trombo">Trombocitopenia / Trombastenia</option>
+        <option value="hipofib">Hipofibrinogenemia</option>
+        <option value="hiperfib">Hiperfibrinolisis</option>
+      </select>
+      <label for="tiempo" style="margin-left:0.8rem;">Tiempo:</label>
+      <select id="tiempo">
+        <option value="1h">1 hora (baño María)</option>
+        <option value="24h">24 horas (retracción)</option>
+      </select>
+    </div>
+
+    <div class="fase-badge">🧪 Observación 1: a la 1 hora (baño María) &nbsp;→&nbsp; 🧫 Observación 2: a las 24 horas (retracción completa)</div>
+    <div class="svg-wrap">
+      <svg viewBox="0 0 400 400" id="svg-petri">
+        <!-- Definiciones -->
+        <defs>
+          <filter id="blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7"/></filter>
+          <pattern id="puntos" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="0.6" fill="#ccc" opacity="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Caja Petri -->
+        <circle cx="200" cy="200" r="190" fill="#e5e8e8" stroke="#bdc3c7" stroke-width="6"/>
+        <circle cx="200" cy="200" r="180" fill="url(#puntos)" stroke="#bdc3c7" stroke-width="1"/>
+
+        <!-- Mancha de suero absorbida por el papel filtro (rosa salmón, bordes irregulares, como en la práctica real) -->
+        <g id="suero-group" opacity="0">
+          <path d="M200 95 C260 95 305 130 308 185 C311 240 285 292 225 303 C165 314 105 292 95 235 C85 178 110 120 160 105 C175 101 190 95 200 95 Z" fill="#f6cbb8"/>
+          <path d="M200 120 C245 118 282 148 285 192 C288 236 262 275 215 283 C165 291 118 272 110 228 C102 184 122 140 165 127 C178 123 190 120 200 120 Z" fill="#f2b8a0" opacity="0.7"/>
+          <path id="suero-rojo" d="M200 140 C235 140 262 162 264 195 C266 228 245 258 208 264 C170 270 135 255 129 222 C123 189 139 155 172 146 C182 143 192 140 200 140 Z" fill="#e8917c" opacity="0"/>
+        </g>
+
+        <!-- Halo de lisis (difuminado rojo) -->
+        <ellipse id="lisis" cx="200" cy="200" rx="0" ry="0" fill="#c0392b" opacity="0" filter="url(#blur)"/>
+
+        <!-- Eritrocitos escapados (puntos rojos) -->
+        <g id="eritros" opacity="0"></g>
+
+        <!-- Coágulo tipo "salchicha" (como se ve al volcarlo del tubo de ensaye) -->
+        <g id="salchicha-group" opacity="0">
+          <path id="salchicha" d="M 105 205 C 105 177, 132 167, 197 170 C 262 173, 294 181, 294 203 C 294 227, 261 238, 197 236 C 132 234, 105 231, 105 205 Z" fill="#c0392b" stroke="#7b241c" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse id="salchicha-brillo" cx="168" cy="190" rx="44" ry="9" fill="#ffffff" opacity="0.16" transform="rotate(-7 168 190)"/>
+        </g>
+
+        <!-- Fragmentos (coágulo friable / lisis parcial) -->
+        <g id="fragmentos" opacity="0">
+          <path d="M 118 148 C 133 138, 160 140, 169 151 C 176 160, 161 171, 140 169 C 121 167, 110 158, 118 148 Z" fill="#cd6155" stroke="#943126" stroke-width="2"/>
+          <path d="M 252 242 C 267 233, 290 237, 294 248 C 297 258, 279 266, 258 262 C 241 259, 239 250, 252 242 Z" fill="#cd6155" stroke="#943126" stroke-width="2"/>
+          <path d="M 174 268 C 188 260, 209 264, 211 273 C 213 283, 196 289, 179 285 C 165 282, 163 274, 174 268 Z" fill="#cd6155" stroke="#943126" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="interpreta" id="interp1"><strong>Interpretación:</strong> Selecciona una condición y un tiempo para ver qué pasa con el coágulo.</div>
+  </div>
+
+  <div class="card">
+    <h2>Tabla A — Parámetros de retracción</h2>
+    <table id="tablaA">
+      <thead><tr><th>Parámetro</th><th>Valor Normal</th><th>Interpretación</th></tr></thead>
+      <tbody>
+        <tr data-key="volumen"><td>Volumen del coágulo</td><td>50 – 60 % del total</td><td>Retracción adecuada</td></tr>
+        <tr data-key="retenido"><td>Suero retenido</td><td>0 – 20 %</td><td>Función plaquetaria normal</td></tr>
+        <tr data-key="expulsado"><td>Suero expulsado</td><td>40 – 50 %</td><td>Coágulo retráctil normal</td></tr>
+        <tr data-key="escape"><td>Escape de eritrocitos</td><td>0 – 5 %</td><td>Coágulo estable</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Tabla B — Condiciones</h2>
+    <table id="tablaB">
+      <thead><tr><th>Condición</th><th>Características del coágulo</th><th>Causa probable</th></tr></thead>
+      <tbody>
+        <tr data-key="normal"><td>Normal</td><td>Firme, retráctil, suero claro expulsado</td><td>—</td></tr>
+        <tr data-key="trombo"><td>Trombocitopenia / Trombastenia</td><td>Friable, suero aumentado, retracción pobre</td><td>Disfunción plaquetaria</td></tr>
+        <tr data-key="hipofib"><td>Hipofibrinogenemia</td><td>Pequeño, firme, escape de eritrocitos aumentado</td><td>Fibrinógeno bajo</td></tr>
+        <tr data-key="hiperfib"><td>Hiperfibrinolisis</td><td>Suave, irregular, lisis parcial</td><td>Activación fibrinolítica</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<!-- ====================== PESTAÑA 2 ====================== -->
+<section id="tab2" class="tab-panel">
+
+  <div class="card">
+    <h2>Tiempo de Coagulación — Método Lee-White</h2>
+    <p style="font-size:0.95rem; margin-bottom:0.6rem;">
+      Esta prueba mide cuánto tarda la sangre en coagularse en un tubo de vidrio a 37 °C. 
+      Es una forma sencilla de detectar problemas graves en la coagulación.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Objetivo General</h2>
+    <p>Medir el tiempo de coagulación de la sangre <em>in vitro</em> como expresión de la eficacia global del sistema intrínseco de la coagulación y el sistema celular plaquetario.</p>
+  </div>
+
+  <div class="card">
+    <h2>Objetivos Específicos</h2>
+    <ul>
+      <li>Identificar el tiempo necesario para que la sangre se coagule en condiciones estandarizadas (37 °C, tubo de vidrio).</li>
+      <li>Detectar deficiencias severas de factores de la coagulación (hemofilia, deficiencia de factor IX).</li>
+      <li>Valorar las propiedades físicas del coágulo (tamaño, aspecto, fuerza).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Fundamento</h2>
+    <p>
+      El método de Lee-White mide la formación de trombina a partir de la activación del sistema intrínseco al contacto con la superficie de vidrio. 
+      La sangre extraída sin anticoagulante se coloca en tubos de vidrio a 37 °C; se inclina suavemente cada 30 segundos hasta que la sangre deja de fluir por las paredes, indicando formación de fibrina.
+    </p>
+    <p style="margin-top:0.4rem;">
+      La prueba <strong>carece de sensibilidad para defectos leves</strong>, pero detecta deficiencias severas. 
+      <em>Nota técnica:</em> la agitación vigorosa o el uso de tubos de plástico/siliconados puede prolongar falsamente el tiempo, al alterar la activación por contacto del factor XII.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Material</h2>
+    <p>2 tubos de ensaye de vidrio limpio y seco (12 × 75 mm), baño María a 37 °C, cronómetro, jeringa de 3 mL, torundas con alcohol al 70 %, ligadura.</p>
+  </div>
+
+  <div class="card">
+    <h2>Metodología</h2>
+    <div class="steps">
+      <div class="step"><strong>1.</strong> Calentar baño María a 37 °C.</div>
+      <div class="step"><strong>2.</strong> Venopunción limpia (sin anticoagulante) y extraer sangre.</div>
+      <div class="step"><strong>3.</strong> Colocar 1 mL de sangre en cada tubo de ensaye.</div>
+      <div class="step"><strong>4.</strong> Iniciar cronómetro al momento de la extracción.</div>
+      <div class="step"><strong>5.</strong> Introducir tubos en el baño María.</div>
+      <div class="step"><strong>6.</strong> A los 3 minutos, retirar el primer tubo e inclinarlo suavemente cada 30 segundos hasta que la sangre deje de fluir por las paredes.</div>
+      <div class="step"><strong>7.</strong> Registrar el tiempo; repetir con el segundo tubo.</div>
+      <div class="step"><strong>8.</strong> El resultado definitivo es el <strong>promedio</strong> de ambos tubos.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Simulador — Tubo de Lee-White</h2>
+    <div class="controls">
+      <label for="escenario">Escenario:</label>
+      <select id="escenario">
+        <option value="normal">Normal</option>
+        <option value="leve">Prolongado leve</option>
+        <option value="severo">Prolongado severo</option>
+        <option value="alterado">Factor alterador</option>
+      </select>
+      <button class="btn" id="btn-iniciar">Iniciar simulación</button>
+      <button class="btn rojo" id="btn-repetir" disabled>Repetir con segundo tubo</button>
+      <div class="cronobox" id="crono">0:00</div>
+    </div>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 300 420" id="svg-tubo">
+        <defs>
+          <linearGradient id="sangreGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c0392b"/>
+            <stop offset="100%" stop-color="#922b21"/>
+          </linearGradient>
+          <linearGradient id="coaguloGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#7b241c"/>
+            <stop offset="100%" stop-color="#581813"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Transformación de inclinación del tubo -->
+        <g id="tubo-group" transform="translate(150,210) rotate(0) translate(-150,-210)">
+          <!-- Tubo de vidrio -->
+          <rect x="100" y="60" width="100" height="280" rx="10" ry="10" fill="none" stroke="#7f8c8d" stroke-width="4" opacity="0.9"/>
+          <!-- Sangre líquida (rectángulo que se encoge) -->
+          <rect id="sangre" x="104" y="80" width="92" height="220" rx="6" ry="6" fill="url(#sangreGrad)" opacity="0.95" transition="all 0.3s ease"/>
+          <!-- Coágulo (aparece al final) -->
+          <rect id="coagulo-tubo" x="104" y="290" width="92" height="0" rx="6" ry="6" fill="url(#coaguloGrad)" opacity="0" transition="all 0.6s ease"/>
+        </g>
+
+        <!-- Texto indicador -->
+        <text id="tubo-texto" x="150" y="390" text-anchor="middle" font-size="13" fill="#555" font-weight="600">Tubo en posición vertical</text>
+      </svg>
+    </div>
+
+    <div class="interpreta" id="interp2"><strong>Interpretación:</strong> Elige un escenario e inicia la simulación para ver cuánto tarda la sangre en coagular.</div>
+
+    <div class="card" style="margin-top:1rem;">
+      <h2>Tabla C — Valores de referencia</h2>
+      <table id="tablaC">
+        <thead><tr><th>Condición</th><th>Tiempo (minutos)</th></tr></thead>
+        <tbody>
+          <tr data-key="normal"><td>Normal</td><td>5 – 10</td></tr>
+          <tr data-key="leve"><td>Prolongado leve</td><td>10 – 15</td></tr>
+          <tr data-key="severo"><td>Prolongado severo</td><td>&gt; 15</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Tabla D — Factores que alteran la prueba</h2>
+      <table>
+        <thead><tr><th>Factor</th><th>Efecto</th></tr></thead>
+        <tbody>
+          <tr><td>Temperatura &lt; 37 °C</td><td>Prolonga el tiempo</td></tr>
+          <tr><td>Tubos de plástico / siliconados</td><td>Prolonga el tiempo (menor activación del FXII)</td></tr>
+          <tr><td>Agitación vigorosa</td><td>Prolonga el tiempo</td></tr>
+          <tr><td>Hemofilia clásica (FVIII)</td><td>Prolonga severamente</td></tr>
+          <tr><td>Deficiencia de factor IX</td><td>Prolonga severamente</td></tr>
+          <tr><td>Trombocitopenia severa</td><td>Coágulo frágil, tiempo aparentemente normal</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+</main>
+
+<script>
+/* ==================== UTILIDADES ==================== */
+function $(id){return document.getElementById(id);}
+function qsa(sel,ctx){return (ctx||document).querySelectorAll(sel);}
+
+/* ==================== NAVEGACIÓN PESTAÑAS ==================== */
+const navButtons = qsa('#nav button');
+navButtons.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    navButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.getAttribute('data-tab');
+    qsa('.tab-panel').forEach(p=>p.classList.remove('active'));
+    $(target).classList.add('active');
+  });
+});
+
+/* ==================== PESTAÑA 1: COÁGULO ==================== */
+const condSelect = $('condicion');
+const tiempoSelect = $('tiempo');
+const interp1 = $('interp1');
+const salchichaGroup = $('salchicha-group');
+const salchicha = $('salchicha');
+const salchichaBrillo = $('salchicha-brillo');
+const fragmentos = $('fragmentos');
+const sueroGroup = $('suero-group');
+const sueroRojo = $('suero-rojo');
+const lisis = $('lisis');
+const eritros = $('eritros');
+
+// Puntos rojos dispersos = eritrocitos que escapan del coágulo al papel filtro
+const eritroDots = [];
+for(let i=0;i<40;i++){
+  const ang = Math.random()*Math.PI*2;
+  const rad = 55 + Math.random()*110;
+  const cx = 200 + Math.cos(ang)*rad;
+  const cy = 200 + Math.sin(ang)*rad;
+  const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('cx', cx);
+  c.setAttribute('cy', cy);
+  c.setAttribute('r', 1.8 + Math.random()*2.6);
+  c.setAttribute('fill', '#b03a2e');
+  c.setAttribute('opacity', 0.75);
+  eritros.appendChild(c);
+  eritroDots.push(c);
+}
+
+// Cada escenario tiene cambios RADICALES y visibles entre sí.
+// Colores basados en la práctica real: coágulo granate oscuro brillante,
+// suero rosado salmón absorbido en mancha por el papel filtro.
+const escenarios1 = {
+  normal: {
+    '1h': { escala:1.0, escalaY:1.0, color:'#c0392b', stroke:'#7b241c', op:1, brillo:0.35,
+            fragOp:0, lisisRx:0, lisisRy:0, lisisOp:0,
+            sueroScale:0.55, sueroOp:0.5, rojoOp:0.08, eritrosOp:0,
+            desc:'A la 1 hora (recién sacado del baño María): la salchicha está GRANDE y roja brillante, como la sangre fresca. Ya se ven indicios de suero rosado alrededor — la retracción empezó.' },
+    '24h': { escala:0.48, escalaY:0.55, color:'#7a1210', stroke:'#420a08', op:1, brillo:0.3,
+            fragOp:0, lisisRx:0, lisisRy:0, lisisOp:0,
+            sueroScale:1.0, sueroOp:0.8, rojoOp:0.05, eritrosOp:0,
+            desc:'¡RETRACCIÓN COMPLETA a las 24 h! La salchicha se encogió a MENOS DE LA MITAD y quedó granate oscuro brillante — ASÍ se ve en la práctica real. La mancha de suero rosado se extendió por todo el papel.' }
+  },
+  trombo: {
+    '1h': { escala:0.95, escalaY:0.85, color:'#b04434', stroke:'#6e2418', op:0.95, brillo:0.2,
+            fragOp:0.4, lisisRx:0, lisisRy:0, lisisOp:0,
+            sueroScale:0.8, sueroOp:0.65, rojoOp:0.45, eritrosOp:0.5,
+            desc:'Coágulo blando y friable: ya se empieza a ROMPER en pedazos. El suero aumenta y se ve MÁS ROJIZO (mezclado con sangre que no se retiene). Las plaquetas no contraen bien.' },
+    '24h': { escala:0.85, escalaY:0.75, color:'#a03a2c', stroke:'#6e2418', op:0.9, brillo:0.15,
+            fragOp:0.95, lisisRx:0, lisisRy:0, lisisOp:0,
+            sueroScale:1.1, sueroOp:0.8, rojoOp:0.6, eritrosOp:0.8,
+            desc:'A las 24 h SIGUE sin retraerse. El coágulo se DESHACE en fragmentos, el suero rojizo aumenta y hay eritrocitos sueltos por doquier. Disfunción plaquetaria (trombocitopenia / trombastenia).' }
+  },
+  hipofib: {
+    '1h': { escala:0.72, escalaY:0.45, color:'#7a1210', stroke:'#420a08', op:1, brillo:0.3,
+            fragOp:0, lisisRx:0, lisisRy:0, lisisOp:0,
+            sueroScale:0.7, sueroOp:0.6, rojoOp:0.15, eritrosOp:0.9,
+            desc:'Coágulo FLACO y delgado (poca red de fibrina), pero MIRA los eritrocitos: se ESCAPAN por todas partes, puntos rojos por todo el papel. Fibrinógeno bajo.' },
+    '24h': { escala:0.55, escalaY:0.4, color:'#5f0e0c', stroke:'#330806', op:1, brillo:0.25,
+            fragOp:0, lisisRx:0, lisisRy:0, lisisOp:0,
+            sueroScale:0.95, sueroOp:0.75, rojoOp:0.2, eritrosOp:1,
+            desc:'A las 24 h sigue delgado con escape MASIVO de eritrocitos. El suero se ve oscuro y lleno de puntos rojos: la red de fibrina no pudo atrapar los glóbulos rojos.' }
+  },
+  hiperfib: {
+    '1h': { escala:1.0, escalaY:0.85, color:'#8e2f10', stroke:'#5e1f0a', op:0.85, brillo:0.2,
+            fragOp:0.4, lisisRx:85, lisisRy:42, lisisOp:0.5,
+            sueroScale:0.75, sueroOp:0.55, rojoOp:0.3, eritrosOp:0.3,
+            desc:'Coágulo suave e irregular con bordes DIFUSOS: parece que se está derritiendo. El suero se ve turbio y manchado. Empieza la lisis.' },
+    '24h': { escala:0.7, escalaY:0.45, color:'#7a2808', stroke:'#5e1f0a', op:0.45, brillo:0.1,
+            fragOp:1, lisisRx:115, lisisRy:62, lisisOp:0.75,
+            sueroScale:1.05, sueroOp:0.7, rojoOp:0.35, eritrosOp:0.55,
+            desc:'¡LISIS PARCIAL a las 24 h! El coágulo casi DESAPARECE: se deshace, se ve borroso y en pedazos. El sistema fibrinolítico desbarata la fibrina antes de tiempo.' }
+  }
+};
+
+function aplicarEstado(d){
+  salchichaGroup.style.transform = 'scale(' + d.escala + ',' + d.escalaY + ')';
+  salchicha.setAttribute('fill', d.color);
+  salchicha.setAttribute('stroke', d.stroke);
+  salchichaGroup.setAttribute('opacity', d.op);
+  salchichaBrillo.setAttribute('opacity', d.brillo);
+  fragmentos.setAttribute('opacity', d.fragOp);
+  lisis.setAttribute('rx', d.lisisRx);
+  lisis.setAttribute('ry', d.lisisRy);
+  lisis.setAttribute('opacity', d.lisisOp);
+  sueroGroup.style.transform = 'scale(' + d.sueroScale + ')';
+  sueroGroup.setAttribute('opacity', d.sueroOp);
+  sueroRojo.setAttribute('opacity', d.rojoOp);
+  eritros.setAttribute('opacity', d.eritrosOp);
+}
+
+function updateTablaHighlight(tabla, key){
+  qsa('tr', tabla).forEach(tr=>tr.classList.remove('highlight'));
+  const target = qsa('tr[data-key="'+key+'"]', tabla)[0];
+  if(target) target.classList.add('highlight');
+}
+
+function renderP1(){
+  const c = condSelect.value;
+  const t = tiempoSelect.value;
+  const datos = escenarios1[c][t];
+  aplicarEstado(datos);
+  interp1.innerHTML = '<strong>Interpretación:</strong> ' + datos.desc;
+  updateTablaHighlight($('tablaB'), c);
+  let aKey = 'volumen';
+  if(c==='trombo') aKey='retenido';
+  if(c==='hipofib') aKey='escape';
+  if(c==='hiperfib') aKey='expulsado';
+  updateTablaHighlight($('tablaA'), aKey);
+}
+
+// Al cambiar condición o tiempo, se muestra el estado directamente.
+// Sin simulación automática: en la práctica real tampoco se ve la transición,
+// se observa a la 1 hora y se vuelve a observar a las 24 horas (dos lecturas separadas).
+condSelect.addEventListener('change', renderP1);
+tiempoSelect.addEventListener('change', renderP1);
+
+renderP1();
+
+/* ==================== PESTAÑA 2: LEE-WHITE ==================== */
+const escenarioSelect = $('escenario');
+const btnIniciar = $('btn-iniciar');
+const btnRepetir = $('btn-repetir');
+const cronoEl = $('crono');
+const sangre = $('sangre');
+const coaguloTubo = $('coagulo-tubo');
+const tuboTexto = $('tubo-texto');
+const tuboGroup = $('tubo-group');
+const interp2 = $('interp2');
+
+const tiemposEscenario = {
+  normal: { min:7, max:10 },
+  leve: { min:11, max:14 },
+  severo: { min:18, max:25 },
+  alterado: { min:12, max:16 }
+};
+
+let timer=null, segundosSim=0, metaSeg=0, simActiva=false, primerTiempo=null, segundoTiempo=null;
+
+function formatearMin(s){
+  const m = Math.floor(s/60);
+  const sec = s%60;
+  return m + ':' + (sec<10?'0':'') + sec;
+}
+
+function setTuboInclinado(inclinado){
+  if(inclinado){
+    tuboGroup.setAttribute('transform','translate(150,210) rotate(35) translate(-150,-210)');
+    tuboTexto.textContent = 'Tubo inclinado — observando flujo…';
+  } else {
+    tuboGroup.setAttribute('transform','translate(150,210) rotate(0) translate(-150,-210)');
+    tuboTexto.textContent = 'Tubo en posición vertical';
+  }
+}
+
+function iniciarSim(){
+  if(simActiva) return;
+  simActiva = true;
+  btnIniciar.disabled = true;
+  btnRepetir.disabled = true;
+  segundosSim = 0;
+  // Calcular meta en segundos simulados (1s real = 30s simulados)
+  const esc = escenarioSelect.value;
+  const r = tiemposEscenario[esc];
+  const metaMin = Math.floor(Math.random()*(r.max-r.min+1))+r.min;
+  metaSeg = metaMin * 60; // segundos simulados meta
+  // Reiniciar visual
+  sangre.setAttribute('height','220');
+  sangre.setAttribute('y','80');
+  sangre.setAttribute('opacity','0.95');
+  coaguloTubo.setAttribute('height','0');
+  coaguloTubo.setAttribute('opacity','0');
+  setTuboInclinado(false);
+  interp2.innerHTML = '<strong>Interpretación:</strong> Simulación en marcha…';
+  updateTablaHighlight($('tablaC'), esc);
+
+  timer = setInterval(()=>{
+    segundosSim += 30; // cada 1s real avanzan 30s simulados
+    cronoEl.textContent = formatearMin(segundosSim);
+
+    // Cada "30s" inclinar tubo
+    if(segundosSim % 30 === 0){
+      const inclinado = (Math.floor(segundosSim/30)%2 === 1);
+      setTuboInclinado(inclinado);
+      // Reducir flujo visual: sangre se encoge un poco
+      const progreso = Math.min(segundosSim / metaSeg, 1);
+      const nuevaAlt = 220 - (progreso * 40); // se encoge hasta 180
+      const nuevaY = 80 + (220 - nuevaAlt); // va bajando
+      sangre.setAttribute('height', nuevaAlt);
+      sangre.setAttribute('y', nuevaY);
+    }
+
+    if(segundosSim >= metaSeg){
+      clearInterval(timer);
+      simActiva = false;
+      // Coagulación completa
+      sangre.setAttribute('height','0');
+      sangre.setAttribute('opacity','0');
+      coaguloTubo.setAttribute('height','60');
+      coaguloTubo.setAttribute('y','270');
+      coaguloTubo.setAttribute('opacity','1');
+      setTuboInclinado(false);
+      tuboTexto.textContent = '¡Coagulación completa!';
+      const minRes = Math.round(metaSeg/60);
+      if(primerTiempo === null){
+        primerTiempo = minRes;
+        interp2.innerHTML = '<strong>Primer tubo:</strong> ' + minRes + ' minutos. Ahora repite con el segundo tubo para sacar el promedio.';
+        btnRepetir.disabled = false;
+      } else {
+        segundoTiempo = minRes;
+        const prom = ((primerTiempo + segundoTiempo)/2).toFixed(1);
+        let mensaje = '<strong>Segundo tubo:</strong> ' + minRes + ' min. <strong>Promedio:</strong> ' + prom + ' min.';
+        if(prom <= 10) mensaje += ' — Resultado <span style="color:'+getComputedStyle(document.documentElement).getPropertyValue('--verde')+'">NORMAL</span>. El sistema de coagulación funciona bien.';
+        else if(prom <= 15) mensaje += ' — <span style="color:'+getComputedStyle(document.documentElement).getPropertyValue('--naranja')+'">PROLONGADO LEVE</span>. Revisa factores leves o condiciones técnicas (temperatura, agitación, plástico).<br>Nota: un factor alterador (plástico, frío, agitación) puede dar este resultado sin enfermedad.';
+        else mensaje += ' — <span style="color:'+getComputedStyle(document.documentElement).getPropertyValue('--rojo')+'">PROLONGADO SEVERO</span>. Posible hemofilia o deficiencia severa de factores de la coagulación. Se requiere estudio especializado.';
+        interp2.innerHTML = mensaje;
+        btnRepetir.disabled = true;
+        primerTiempo = null;
+        segundoTiempo = null;
+      }
+      btnIniciar.disabled = false;
+    }
+  }, 1000);
+}
+
+btnIniciar.addEventListener('click', ()=>{ primerTiempo=null; segundoTiempo=null; iniciarSim(); });
+btnRepetir.addEventListener('click', iniciarSim);
+
+// Inicializar highlight tabla C
+updateTablaHighlight($('tablaC'), 'normal');
+
+</script>
+</body>
+</html>
